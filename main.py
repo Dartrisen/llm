@@ -72,5 +72,5 @@ for b in range(batch_size):  # batch dimension
         print(f"when input is {context.tolist()} the target: {target}")
 
 m = BigramLanguageModel(vocab_size)
-out = m(xb, yb)
-print(out.shape)
+logits, loss = m(xb, yb)
+print(loss)
