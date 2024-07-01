@@ -2,50 +2,35 @@ import torch
 
 from model import BigramLanguageModel
 
+# hyperparameters
+batch_size = 32  # how many independent sequences will we process in parallel?
+block_size = 8  # what is the maximum context length for predictions?
+max_iters = 3000
+eval_interval = 300
+learning_rate = 1e-2
+device = "mps" if torch.cuda.is_available() else "cpu"
+eval_iters = 200
+torch.manual_seed (1337)
+
 with open('input.txt', 'r', encoding='utf-8') as f:
     text = f.read()
-
-print("length of dataset in characters: ", len(text))
 
 # here are all the unique characters that occur in this text
 chars = sorted(list(set(text)))
 vocab_size = len(chars)
-print(''.join(chars))
-print(vocab_size)
-
 # create a mapping from characters to integers
-stoi = { ch:i for i,ch in enumerate(chars) }
-itos = { i:ch for i,ch in enumerate(chars) }
-encode = lambda s: [stoi[c] for c in s] # encoder: take a string, output a list of integers
-decode = lambda l: ''.join([itos[i] for i in l]) # decoder: take a list of integers, output a string
-
-print(encode("hii there"))
-print(decode(encode("hii there")))
+stoi = {ch: i for i, ch in enumerate(chars)}
+itos = {i: ch for i, ch in enumerate(chars)}
+encode = lambda s: [stoi[c] for c in s]  # encoder: take a string, output a list of integers
+decode = lambda l: ''.join([itos[i] for i in l])  # decoder: take a list of integers, output a string
 
 data = torch.tensor(encode(text), dtype=torch.long)
-print(data.shape, data.dtype)
-print(data[:1000])  # the 1000 characters we looked at earier will to the GPT look like this
-
-# Let's now split up the data into train and validation sets
 n = int(0.9*len(data))  # first 90% will be train, rest val
 train_data = data[:n]
 val_data = data[n:]
 
-block_size = 8
-print(train_data[:block_size+1])
 
-x = train_data[:block_size]
-y = train_data[1:block_size+1]
-for t in range(block_size):
-    context = x[:t+1]
-    target = y[t]
-    print(f"when input is {context} the target: {target}")
-
-torch.manual_seed(1337)
-batch_size = 4  # how many independent sequences will we process in parallel?
-block_size = 8  # what is the maximum context length for predictions?
-
-
+# data loading
 def get_batch(split):
     # generate a small batch of data of inputs x and targets y
     data = train_data if split == 'train' else val_data
@@ -53,6 +38,21 @@ def get_batch(split):
     x = torch.stack([data[i:i+block_size] for i in ix])
     y = torch.stack([data[i+1:i+block_size+1] for i in ix])
     return x, y
+
+
+@torch.no_grad()
+def estimate_loss():
+    out = {}
+    model.eval()
+    for split in ["train", "val"]:
+        losses = torch.zeros(eval_iters)
+        for k in range(eval_iters):
+            X, Y = get_batch(split)
+            logits, loss = model(X, Y)
+            losses[k] = loss.item()
+        out[split] = losses.mean()
+    model.train()
+    return out
 
 
 xb, yb = get_batch('train')
@@ -71,14 +71,14 @@ for b in range(batch_size):  # batch dimension
         target = yb[b, t]
         print(f"when input is {context.tolist()} the target: {target}")
 
-m = BigramLanguageModel(vocab_size)
-logits, loss = m(xb, yb)
+model = BigramLanguageModel(vocab_size)
+logits, loss = model(xb, yb)
 print(logits.shape)
 print(loss)
 
-print(decode(m.generate(idx=torch.zeros((1, 1), dtype=torch.long), max_new_tokens=100)[0].tolist()))
+print(decode(model.generate(idx=torch.zeros((1, 1), dtype=torch.long), max_new_tokens=100)[0].tolist()))
 
-optimizer = torch.optim.Adam(m.parameters(), lr=1e-3)
+optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
 batch_size = 32
 for steps in range(1000): # increase number of steps for good results...
@@ -87,10 +87,10 @@ for steps in range(1000): # increase number of steps for good results...
     xb, yb = get_batch('train')
 
     # evaluate the loss
-    logits, loss = m(xb, yb)
+    logits, loss = model(xb, yb)
     optimizer.zero_grad(set_to_none=True)
     loss.backward()
     optimizer.step()
 
 print(loss.item())
-print(decode(m.generate(idx=torch.zeros((1, 1), dtype=torch.long), max_new_tokens=100)[0].tolist()))
+print(decode(model.generate(idx=torch.zeros((1, 1), dtype=torch.long), max_new_tokens=100)[0].tolist()))
