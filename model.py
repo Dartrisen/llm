@@ -3,6 +3,16 @@ import torch.nn as nn
 from torch.nn import functional as F
 
 
+class Head(nn.Module):
+    """Head of self-attention."""
+    def __init__(self, head_size, block_size, n_embd):
+        super().__init__()
+        self.key = nn.Linear(n_embd, head_size, bias=False)
+        self.query = nn.Linear(n_embd, head_size, bias=False)
+        self.value = nn.Linear(n_embd, head_size, bias=False)
+        self.register_buffer("tril", torch.tril(torch.ones(block_size, block_size)))
+
+
 class BigramLanguageModel(nn.Module):
     def __init__(self, vocab_size, block_size, n_embd):
         super().__init__()
