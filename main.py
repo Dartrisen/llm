@@ -60,7 +60,7 @@ def estimate_loss():
     return out
 
 
-model = BigramLanguageModel(vocab_size=vocab_size, head_size=n_embd, block_size=block_size, n_embd=n_embd)
+model = BigramLanguageModel(vocab_size=vocab_size, head_size=n_embd//4, block_size=block_size, n_embd=n_embd)
 m = model.to(device)
 
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
