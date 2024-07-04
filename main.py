@@ -72,8 +72,15 @@ model = BigramLanguageModel(
     dropout=dropout
 )
 m = model.to(device)
+print(sum(p.numel() for p in m.parameters()) / 1e6, 'M parameters')
 
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+
+
+def save_model():
+    path = "./model.pth"
+    torch.save(model.state_dict(), path)
+
 
 for iter in range(max_iters):
     if iter % eval_interval == 0:
@@ -90,3 +97,4 @@ for iter in range(max_iters):
 
 context = torch.zeros((1, 1), dtype=torch.long, device=device)
 print(decode(m.generate(context, max_new_tokens=500)[0].tolist()))
+save_model()
