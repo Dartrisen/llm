@@ -3,14 +3,17 @@ import torch
 from model import BigramLanguageModel
 
 # hyperparameters
-batch_size = 32  # how many independent sequences will we process in parallel?
-block_size = 8  # what is the maximum context length for predictions?
+batch_size = 64  # how many independent sequences will we process in parallel?
+block_size = 256  # what is the maximum context length for predictions?
 max_iters = 5000
 eval_interval = 500
-learning_rate = 1e-3
+learning_rate = 3e-4
 device = "mps" if torch.backends.mps.is_available() else "cpu"
 eval_iters = 200
-n_embd = 32
+n_embd = 384
+n_layer = 6
+n_head = 6
+dropout = 0.2
 
 torch.manual_seed(1337)
 
@@ -60,7 +63,14 @@ def estimate_loss():
     return out
 
 
-model = BigramLanguageModel(vocab_size=vocab_size, head_size=n_embd//4, block_size=block_size, n_embd=n_embd)
+model = BigramLanguageModel(
+    vocab_size=vocab_size,
+    n_head=n_head,
+    block_size=block_size,
+    n_embd=n_embd,
+    n_layer=n_layer,
+    dropout=dropout
+)
 m = model.to(device)
 
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
